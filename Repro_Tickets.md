@@ -1,6 +1,6 @@
 # Repro — implementation tickets
 
-Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunk 1 (ALI-5, ALI-6, ALI-7) is implemented and submitted for review before merging to main; remaining tickets are in Backlog.
+Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunk 1 (ALI-5, ALI-6, ALI-7) is implemented and in review. Chunk 2 is in progress as noted below; later tickets remain in Backlog.
 
 Chunk 2 (ALI-8, ALI-10, ALI-9) is now in progress on its own branch. Provider/browser/worker code and offline checks are implemented. Real Crusoe validation is blocked until the local API key is supplied; the chunk is not yet marked complete. Independent verification remains Chunk 3. Queue cancellation/restart/limit primitives were brought forward to keep the worker bounded.
 
