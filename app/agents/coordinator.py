@@ -78,6 +78,8 @@ Repeated clicks are not recovery. An ineligible coupon under the rules is expect
 Capture evidence before/after relevant actions; every browser result already has a screenshot ID.
 When a rule violation is observed, call candidate with exact expected/observed values and two
 relevant evidence IDs; trusted code attaches the actual sequence. It awaits independent verification.
+Submit that candidate immediately; do not reset or repeat the sequence just to confirm it.
+Independent replay belongs to the separate verifier. Reset discards the attached sequence.
 Never claim confirmed, root cause, fixed, or verified. If expectations are ambiguous, finish with
 needs_information and the precise missing rule/fixture. If the attempts find no failure, finish
 not_reproduced, without claiming no bug exists. Use tools for progress, not prose-only replies.'''

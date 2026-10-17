@@ -2,7 +2,7 @@
 
 Turn a vague website complaint into an independently reproduced bug, a runnable regression test, and an optional tested patch for engineer review.
 
-**Track:** Done Means Done. **Current branch:** Chunk 2 — bounded Crusoe/browser investigation, with live provider validation pending local credentials. Chunk 1 is a separate review gate. No live Crusoe run is claimed until the readiness check and a real case succeed.
+**Track:** Done Means Done. **Current branch:** Chunk 2 — bounded Crusoe/browser investigation. Chunk 1 is merged. A live Crusoe tool round trip and autonomous candidate discovery passed; independent confirmation belongs to Chunk 3.
 
 ## What works now
 
@@ -58,7 +58,7 @@ Browser tests start their own temporary server, cases directory, and fresh brows
 - [Product rules v1](docs/STORE_RULES.md) — also visible at `/rules`.
 - [Operator-only demo guide](docs/DEMO.md) — contains the trigger; exclude from investigator input.
 - [Chunk 1 verification](docs/CHUNK_1_VERIFICATION.md) — 18 passing checks and known limits.
-- [Chunk 2 verification](docs/CHUNK_2_VERIFICATION.md) — offline protocol/integration results and live-validation blocker.
+- [Chunk 2 verification](docs/CHUNK_2_VERIFICATION.md) — protocol/integration results and measured live Crusoe candidate discovery.
 - [Technical design](Repro_Design_Doc.md).
 - [Implementation plan and Linear mapping](Repro_Tickets.md).
 - [Linear project](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues).
@@ -84,10 +84,10 @@ Copy `.env.example` to `.env` and enter `CRUSOE_API_KEY` locally. Never paste ke
 
 ## Delivery workflow
 
-Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunk 1 implements Linear ALI-5, ALI-6, ALI-7. Chunk 2 addresses ALI-8, ALI-10, ALI-9 and remains incomplete until a live connection and investigation are verified. If the preceding PR remains open, the next PR is stacked on its feature branch and must be retargeted after that merge.
+Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunk 1 (Linear ALI-5, ALI-6, ALI-7) is merged. Chunk 2 (ALI-8, ALI-10, ALI-9) has passed its live connection and investigation gate and targets main in PR #2. It awaits owner review.
 
 ## Architecture and limits
 
-FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 browser actions, three hypotheses, 24 provider requests including retries, 80,000 budget tokens, five minutes per attempt. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation/startup recovery controls were brought forward from Chunk 3 because the worker needs them. No automated confirmation, repair, multi-tenant hosting, or arbitrary-site access is included.
+FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 browser actions, three hypotheses, 24 provider requests including retries, 160,000 budget tokens, five minutes per attempt. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation/startup recovery controls were brought forward from Chunk 3 because the worker needs them. No automated confirmation, repair, multi-tenant hosting, or arbitrary-site access is included.
 
 Built here: store artwork/UI, synthetic checkout state, seeded defect/control, report API, case receipt, docs, and tests. Libraries: FastAPI, Uvicorn, Pydantic, Playwright, HTTPX, pytest, and python-dotenv; their respective licenses apply. The product illustration is original inline SVG and uses no external assets.

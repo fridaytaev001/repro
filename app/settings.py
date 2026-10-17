@@ -17,7 +17,7 @@ class Settings:
     queue_size: int = 5
     max_actions: int = 30
     max_calls: int = 24
-    max_tokens: int = 80000
+    max_tokens: int = 160000
     timeout_seconds: int = 300
     max_output_tokens: int = 4096
 
