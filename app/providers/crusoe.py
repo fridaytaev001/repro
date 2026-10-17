@@ -6,7 +6,7 @@ from typing import Callable
 import httpx
 
 BASE_URL = 'https://api.inference.crusoecloud.com/v1'
-PREFERRED_MODEL = 'nvidia/Nemotron-3-Super-120B-A12B'
+PREFERRED_MODEL = 'nvidia/NVIDIA-Nemotron-3-Super-120B-A12B'
 
 
 class ProviderError(Exception):

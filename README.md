@@ -2,7 +2,7 @@
 
 Turn a vague website complaint into an independently reproduced bug, a runnable regression test, and an optional tested patch for engineer review.
 
-**Track:** Done Means Done. **Current branch:** Chunk 6 — delivery and demo. Chunks 1–4 are merged; repair and delivery PRs await owner review. Real Crusoe discovery, independent replay, control/recovery, and a protected before/after repair have been recorded. A labelled one-minute recorded walkthrough and backup evidence bundle are prepared locally.
+**Track:** Done Means Done. All six implementation chunks are merged. Real Crusoe discovery, independent replay, control/recovery, and a protected before/after repair have been recorded. A labelled one-minute recorded walkthrough and backup evidence bundle are prepared locally.
 
 ## What works now
 
@@ -34,13 +34,13 @@ Open **http://127.0.0.1:8000**. Report files live in ignored `runs/`. A report i
 
 On the prepared Windows workspace, double-click **Start_Repro.cmd**. It uses the existing `.venv` and workspace browser cache. Cross-platform: `python -m scripts.run_local --open`. It reuses an already running Repro server.
 
-If opening `.env` is inconvenient, run `python -m scripts.configure` in your terminal. Its masked prompt saves the key only in the ignored local file; no chat paste or commit is needed.
+If opening `.env` is inconvenient, double-click **Configure_Repro.cmd** on the prepared Windows workspace, or run `python -m scripts.configure` in your terminal. Paste your Crusoe Intelligence API key into its masked prompt and press Enter. It saves only in the ignored local file; no chat paste or commit is needed. Keys are not model-specific; model selection is configured separately.
 
 ## Enable a real investigation
 
 1. Copy `.env.example` to `.env` and set `CRUSOE_API_KEY` locally. The ignored `.env` is read on each new attempt; keys containing dollar signs are preserved without interpolation.
 2. Set `REPRO_TARGET_URL` if the demo runs on another loopback port, and include that origin in `REPRO_ALLOWED_ORIGINS`.
-3. Run `python -m scripts.check_crusoe`. It discovers the exact Nemotron 3 Super ID from the live catalog and checks a real tool-call/result round trip. Alternatively set `CRUSOE_MODEL` to an exact available tool-calling ID. This check makes small billed inference requests.
+3. Use `CRUSOE_MODEL=nvidia/NVIDIA-Nemotron-3-Super-120B-A12B` for Nemotron 3 Super, then run `python -m scripts.check_crusoe`. It checks that exact ID against the live catalog and verifies a real tool-call/result round trip. Alternatively set `CRUSOE_MODEL` to another exact available tool-calling ID. This check makes small billed inference requests. The same selection powers investigation and isolated repair. Earlier saved DeepSeek cases and recorded delivery media retain their original model provenance; submit a new report to demonstrate Nemotron.
 4. Submit a vague complaint through the store, or open an existing blocked receipt and click **Start investigation**.
 
 The default runtime sends inference only to Crusoe's fixed serverless endpoint. It reads public store rules and real visible browser observations; source code, evaluator tests, and the operator guide are not included in model input. Browser requests are limited to the configured demo origin/assets; service writes and other origins are blocked. There is no shell, arbitrary JavaScript, or source-edit tool.
