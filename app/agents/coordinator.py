@@ -225,6 +225,21 @@ class Investigation:
             async with asyncio.timeout(self.settings.timeout_seconds):
                 while not self.finished:
                     self.check_budget()
+                    # Old element IDs are expired. Keep the observed page text and
+                    # evidence, but remove stale control catalogs from model history.
+                    # Full observations remain in the append-only event record.
+                    old_browser_results = []
+                    for message in messages:
+                        if message.get('role') == 'tool':
+                            try:
+                                output = json.loads(message['content'])
+                                if 'observation' in output:
+                                    old_browser_results.append((message, output))
+                            except (ValueError, TypeError):
+                                pass
+                    for message, output in old_browser_results[:-2]:
+                        output['observation'].pop('elements', None)
+                        message['content'] = json.dumps(output, ensure_ascii=False)
                     estimated = len(json.dumps(messages)) // 2 + self.settings.max_output_tokens
                     if self.case['usage_tokens'] + estimated > self.settings.max_tokens:
                         raise LimitReached('Remaining token budget is too small for another bounded request.')

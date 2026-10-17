@@ -28,6 +28,9 @@ function render(data){
   document.querySelector('#cancel-run').hidden=!active;
   document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification'||data.outcome==='confirmed';
   document.querySelector('#verify-run').hidden=active||!data.investigation_enabled||!data.candidate||data.outcome==='confirmed';
+  document.querySelector('#handoff-panel').hidden=active;
+  text('#handoff-note',data.candidate?'Includes actual replay steps, frozen criteria, screenshots/traces, and separate reproduction and regression tests. The reproduction test passes on the buggy target; the regression test should fail until a repair is verified.':'Report and existing evidence are available. Replay and tests are unavailable until a candidate exists.');
+  for(const [selector,kind] of [['#download-report-md','markdown'],['#download-report-json','json'],['#download-bundle','bundle']])document.querySelector(selector).href=endpoint+'/exports/'+kind;
   text('#run-budget',data.model?data.model+' · '+(data.browser_action_count||0)+' browser actions · '+(data.provider_request_count||0)+' provider requests':'');
   document.querySelector('#criteria-panel').hidden=!data.acceptance;
   if(data.acceptance){
