@@ -209,6 +209,10 @@ class RepairRun:
             repair['diff_id'] = self.store.register(self.case,patch_path,'text/x-diff')
             node = shutil.which('node')
             if not node:
+                from playwright._impl._driver import compute_driver_executable
+                bundled_node = compute_driver_executable()[0]
+                node = bundled_node if Path(bundled_node).is_file() else None
+            if not node:
                 raise ValueError('Node.js is required for the registered syntax check.')
             syntax = await run_command([node,'--check',workspace.candidate/'store.js'],ROOT,10)
             repair['syntax'] = syntax

@@ -98,6 +98,9 @@ async def test_setup_failure_cannot_count_as_baseline_proof(tmp_path,monkeypatch
 @pytest.mark.asyncio
 async def test_candidate_failure_preserves_confirmation(tmp_path,monkeypatch):
     case=confirmed_case()
+    # Explorer-launched Windows apps may lack Node on PATH. The pinned
+    # Playwright driver's bundled Node must still run the syntax check.
+    monkeypatch.setattr('app.agents.repair.shutil.which',lambda name:None)
     async def failure(self,*args):
         return {'returncode':1,'result':{'regression':'fail','controls':{'status':'pass'}}}
     monkeypatch.setattr(RepairRun,'check',failure)
