@@ -16,7 +16,7 @@ def live_server(tmp_path_factory):
     sock.bind(('127.0.0.1', 0))
     port = sock.getsockname()[1]
     url = f'http://127.0.0.1:{port}'
-    app = create_app(tmp_path_factory.mktemp('browser-cases'), {url})
+    app = create_app(tmp_path_factory.mktemp('browser-cases'), {url}, enable_investigation=False)
     server = uvicorn.Server(uvicorn.Config(app, log_level='warning'))
     thread = threading.Thread(target=server.run, kwargs={'sockets': [sock]}, daemon=True)
     thread.start()

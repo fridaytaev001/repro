@@ -78,7 +78,7 @@ def test_report_from_checkout_creates_honest_receipt_with_safe_text(page, live_s
     expect(page.get_by_role('heading', name='Your report is in.', exact=True)).to_be_visible()
     expect(page.locator('#complaint')).to_have_text(complaint)
     assert page.locator('#complaint img').count() == 0
-    expect(page.locator('#case-message')).to_contain_text('Chunk 2')
+    expect(page.locator('#case-message')).to_contain_text('disabled')
     page.reload()
     expect(page.locator('#complaint')).to_have_text(complaint)
 

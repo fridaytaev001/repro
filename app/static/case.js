@@ -1,17 +1,78 @@
 const id=location.pathname.split('/').pop();
-(async()=>{
-  try {
-    const response=await fetch(`/api/runs/${encodeURIComponent(id)}`);
-    if(!response.ok) throw new Error(response.status===404?'This report could not be found.':'The saved report is temporarily unavailable.');
-    const data=await response.json();
-    document.querySelector('#case-heading').textContent='Your report is in.';
-    document.querySelector('#case-message').textContent=data.message;
-    document.querySelector('#case-id').textContent=`CASE / ${data.id}`;
-    document.querySelector('#case-date').textContent=new Date(data.created_at).toLocaleString();
-    document.querySelector('#complaint').textContent=data.report.complaint;
-    document.querySelector('#expected').textContent=data.report.expected_behavior;
-    document.querySelector('#steps').textContent=data.report.steps || 'No steps supplied — that is okay.';
-    document.querySelector('#page-url').textContent=data.report.page_url;
-    document.querySelector('#case-details').hidden=false;
-  } catch(error) { document.querySelector('#case-heading').textContent='We could not open this report.'; document.querySelector('#case-message').textContent=error.message; }
-})();
+const endpoint='/api/runs/'+encodeURIComponent(id);
+let cursor=0;
+let polling=false;
+const text=(selector,value)=>{document.querySelector(selector).textContent=value??'';};
+function element(tag,value){const node=document.createElement(tag);node.textContent=value;return node;}
+function screenshot(artifactId){
+  const link=document.createElement('a');
+  link.href=endpoint+'/artifacts/'+encodeURIComponent(artifactId);
+  link.target='_blank';link.rel='noopener';
+  const image=document.createElement('img');image.src=link.href;image.alt='Actual browser evidence';image.loading='lazy';
+  link.append(image);return link;
+}
+function render(data){
+  const stages={received:'Your report is in.',queued:'An investigation is queued.',investigating:'Following the evidence.',awaiting_verification:'A candidate worth checking.',finished:'The investigation stopped.'};
+  const outcomes={blocked:'The investigation is blocked.',not_reproduced:'No reproduction established.',needs_information:'More information is needed.'};
+  text('#case-heading',outcomes[data.outcome]||stages[data.stage]||'Your report is in.');
+  text('#case-message',data.message);
+  let mode=data.execution_mode==='live'&&data.calls?.length?'LIVE CRUSOE':data.execution_mode==='test'?'TEST EXECUTION':data.execution_mode==='live'?'CRUSOE / NO MODEL RESPONSE':'PROVIDER UNAVAILABLE';
+  if(!data.investigation_enabled)mode='INVESTIGATION DISABLED';
+  text('#execution-mode',mode+' / '+(data.outcome||data.stage).replaceAll('_',' ').toUpperCase());
+  text('#case-id','CASE / '+data.id);
+  text('#case-date',new Date(data.created_at).toLocaleString());
+  text('#complaint',data.report.complaint);text('#expected',data.report.expected_behavior);
+  text('#steps',data.report.steps||'No steps supplied — that is okay.');text('#page-url',data.report.page_url);
+  document.querySelector('#case-details').hidden=false;
+  const active=['queued','investigating'].includes(data.stage);
+  document.querySelector('#cancel-run').hidden=!active;
+  document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification';
+  text('#run-budget',data.model?data.model+' · '+(data.browser_action_count||0)+' browser actions · '+(data.provider_request_count||0)+' provider requests':'');
+  document.querySelector('#criteria-panel').hidden=!data.acceptance;
+  if(data.acceptance){
+    text('#criteria-version','FROZEN ACCEPTANCE CHECKS / VERSION '+data.acceptance.version);
+    const list=document.querySelector('#criteria');list.replaceChildren();
+    for(const check of data.acceptance.checks){list.append(element('li',check.description+' — expected: '+check.expected));}
+  }
+  document.querySelector('#candidate-panel').hidden=!data.candidate;
+  if(data.candidate){
+    text('#candidate-summary',data.candidate.summary);text('#candidate-expected',data.candidate.expected_behavior);text('#candidate-observed',data.candidate.observed_behavior);
+    const steps=document.querySelector('#candidate-steps');steps.replaceChildren();
+    for(const step of data.candidate.steps){steps.append(element('li',step.action+(step.target?' '+step.target.name:'')+(step.value?' → '+step.value:'')+(step.url?' '+step.url:'')));}
+    const evidence=document.querySelector('#candidate-evidence');
+    if(evidence.dataset.attempt!==data.attempt_id){evidence.replaceChildren(...data.candidate.evidence_ids.map(screenshot));evidence.dataset.attempt=data.attempt_id;}
+  }
+}
+function appendEvents(events){
+  if(events.length)document.querySelector('#timeline-panel').hidden=false;
+  for(const event of events){
+    const item=document.createElement('li');
+    item.append(element('span',new Date(event.timestamp).toLocaleTimeString()),element('strong',event.summary));
+    if(event.experiment)item.append(element('p',event.experiment));
+    if(event.prior_result)item.append(element('p','Previous result: '+event.prior_result));
+    if(event.result?.observation){const details=document.createElement('details');details.append(element('summary','Read browser observation'),element('pre',event.result.observation.text));const a=document.createElement('a');a.href=endpoint+'/artifacts/'+encodeURIComponent(event.result.evidence_id);a.textContent='Open actual screenshot ↗';a.target='_blank';a.rel='noopener';details.append(a);item.append(details);}
+    document.querySelector('#timeline').append(item);
+    cursor=event.seq;
+  }
+}
+async function refresh(){
+  if(polling)return;
+  polling=true;
+  try{
+    const response=await fetch(endpoint);
+    if(!response.ok)throw new Error(response.status===404?'This report could not be found.':'The saved report is temporarily unavailable.');
+    const data=await response.json();render(data);
+    const eventsResponse=await fetch(endpoint+'/events?after='+cursor);
+    if(eventsResponse.ok)appendEvents((await eventsResponse.json()).events);
+    if(['queued','investigating'].includes(data.stage))setTimeout(refresh,1500);
+  }catch(error){text('#case-heading','We could not open this report.');text('#case-message',error.message);}
+  finally{polling=false;}
+}
+for(const [selector,action] of [['#start-run','start'],['#cancel-run','cancel']]){
+  document.querySelector(selector).addEventListener('click',async event=>{
+    event.target.disabled=true;text('#run-error','');
+    try{const response=await fetch(endpoint+'/'+action,{method:'POST'});if(!response.ok){const detail=(await response.json()).detail;throw new Error(typeof detail==='string'?detail:'Could not update this case.');}await refresh();}
+    catch(error){text('#run-error',error.message);}finally{event.target.disabled=false;}
+  });
+}
+refresh();
