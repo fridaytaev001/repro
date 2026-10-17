@@ -12,8 +12,8 @@ function screenshot(artifactId){
   link.append(image);return link;
 }
 function render(data){
-  const stages={received:'Your report is in.',queued:'An investigation is queued.',investigating:'Following the evidence.',awaiting_verification:'A candidate worth checking.',finished:'The investigation stopped.'};
-  const outcomes={blocked:'The investigation is blocked.',not_reproduced:'No reproduction established.',needs_information:'More information is needed.'};
+  const stages={received:'Your report is in.',queued:'An investigation is queued.',investigating:'Following the evidence.',verifying:'Checking in a fresh session.',awaiting_verification:'A candidate worth checking.',finished:'The investigation stopped.'};
+  const outcomes={confirmed:'The bug is independently confirmed.',blocked:'The investigation is blocked.',not_reproduced:'No reproduction established.',needs_information:'More information is needed.'};
   text('#case-heading',outcomes[data.outcome]||stages[data.stage]||'Your report is in.');
   text('#case-message',data.message);
   let mode=data.execution_mode==='live'&&data.calls?.length?'LIVE CRUSOE':data.execution_mode==='test'?'TEST EXECUTION':data.execution_mode==='live'?'CRUSOE / NO MODEL RESPONSE':'PROVIDER UNAVAILABLE';
@@ -24,9 +24,10 @@ function render(data){
   text('#complaint',data.report.complaint);text('#expected',data.report.expected_behavior);
   text('#steps',data.report.steps||'No steps supplied — that is okay.');text('#page-url',data.report.page_url);
   document.querySelector('#case-details').hidden=false;
-  const active=['queued','investigating'].includes(data.stage);
+  const active=['queued','investigating','verifying'].includes(data.stage);
   document.querySelector('#cancel-run').hidden=!active;
-  document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification';
+  document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification'||data.outcome==='confirmed';
+  document.querySelector('#verify-run').hidden=active||!data.investigation_enabled||!data.candidate||data.outcome==='confirmed';
   text('#run-budget',data.model?data.model+' · '+(data.browser_action_count||0)+' browser actions · '+(data.provider_request_count||0)+' provider requests':'');
   document.querySelector('#criteria-panel').hidden=!data.acceptance;
   if(data.acceptance){
@@ -36,11 +37,25 @@ function render(data){
   }
   document.querySelector('#candidate-panel').hidden=!data.candidate;
   if(data.candidate){
+    text('#candidate-label',data.outcome==='confirmed'?'CANDIDATE / INDEPENDENTLY CONFIRMED':'CANDIDATE / REQUIRES INDEPENDENT VERIFICATION');
     text('#candidate-summary',data.candidate.summary);text('#candidate-expected',data.candidate.expected_behavior);text('#candidate-observed',data.candidate.observed_behavior);
     const steps=document.querySelector('#candidate-steps');steps.replaceChildren();
     for(const step of data.candidate.steps){steps.append(element('li',step.action+(step.target?' '+step.target.name:'')+(step.value?' → '+step.value:'')+(step.url?' '+step.url:'')));}
     const evidence=document.querySelector('#candidate-evidence');
     if(evidence.dataset.attempt!==data.attempt_id){evidence.replaceChildren(...data.candidate.evidence_ids.map(screenshot));evidence.dataset.attempt=data.attempt_id;}
+  }
+  document.querySelector('#verification-panel').hidden=!data.verification;
+  if(data.verification){
+    const v=data.verification;
+    text('#verification-heading',data.stage==='verifying'?'Fresh-session replay in progress':v.status==='pass'?'Rule violation observed independently':v.status==='fail'?'Candidate was not reproduced':'Verification is inconclusive');
+    text('#verification-reason',v.reason||'Fresh-session replay is running.');
+    text('#verification-budget',(v.action_count||0)+' replay actions · '+(v.elapsed_seconds??'…')+' seconds · '+v.policy);
+    const list=document.querySelector('#verification-values');list.replaceChildren();
+    for(const row of v.observations){if(row.values.total!==null)list.append(element('li','Step '+row.step+': total '+row.values.total+'; coupon '+(row.values.coupon||'none')+'; '+row.values.stage));}
+    const evidence=document.querySelector('#verification-evidence');
+    const ids=(v.violations||[]).map(x=>x.evidence_id);
+    const key=v.id+ids.join(',');
+    if(evidence.dataset.version!==key){evidence.replaceChildren(...ids.map(screenshot));evidence.dataset.version=key;}
   }
 }
 function appendEvents(events){
@@ -64,11 +79,11 @@ async function refresh(){
     const data=await response.json();render(data);
     const eventsResponse=await fetch(endpoint+'/events?after='+cursor);
     if(eventsResponse.ok)appendEvents((await eventsResponse.json()).events);
-    if(['queued','investigating'].includes(data.stage))setTimeout(refresh,1500);
+    if(['queued','investigating','verifying'].includes(data.stage))setTimeout(refresh,1500);
   }catch(error){text('#case-heading','We could not open this report.');text('#case-message',error.message);}
   finally{polling=false;}
 }
-for(const [selector,action] of [['#start-run','start'],['#cancel-run','cancel']]){
+for(const [selector,action] of [['#start-run','start'],['#cancel-run','cancel'],['#verify-run','verify']]){
   document.querySelector(selector).addEventListener('click',async event=>{
     event.target.disabled=true;text('#run-error','');
     try{const response=await fetch(endpoint+'/'+action,{method:'POST'});if(!response.ok){const detail=(await response.json()).detail;throw new Error(typeof detail==='string'?detail:'Could not update this case.');}await refresh();}

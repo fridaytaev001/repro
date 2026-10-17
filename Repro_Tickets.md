@@ -1,8 +1,10 @@
 # Repro — implementation tickets
 
-Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunk 1 (ALI-5, ALI-6, ALI-7) is merged and Done. Chunk 2 is ready for review; later tickets remain in Backlog.
+Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunk 1 (ALI-5, ALI-6, ALI-7) is merged and Done. Chunks 2 and 3 are In Review; chunks 4–6 remain in Backlog.
 
 Chunk 2 (ALI-8, ALI-10, ALI-9) has 36 passing tests and a successful live Crusoe tool round trip and autonomous candidate discovery. PR #2 targets main and awaits owner review. The measured candidate has screenshots and executed steps, with independent verification remaining in Chunk 3. Queue cancellation/restart/limit primitives were brought forward to keep the worker bounded. See docs/CHUNK_2_VERIFICATION.md for actual usage and the first attempt's budget stop.
+
+Chunk 3 (ALI-11, ALI-12) implements independent browser replay, deterministic coupon-preservation verification, cancellation/restart handling, and bounded outcomes. The saved live Crusoe candidate was independently confirmed in 11 replay actions / 9.52 seconds with fresh evidence and no new model requests. The branch is stacked on Chunk 2 and awaits its own owner review. See docs/CHUNK_3_VERIFICATION.md.
 
 The six chunks are implemented as native Linear project milestones containing 14 issues. Complete chunks 1–4 for the reproduction MVP; chunk 5 adds repair; chunk 6 prepares delivery. Dependencies are recorded in ticket descriptions using the stable R01–R14 planning references; native blocking relationships have not been added.
 

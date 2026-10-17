@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.agents.coordinator import Investigation
+from app.agents.coordinator import Investigation, RunManager
 from app.runs import CaseStore
 from app.settings import Settings
 from app.tools.browser import BrowserSession, BrowserAction
@@ -111,3 +111,26 @@ async def test_runtime_browser_blocks_foreign_navigation_and_service_writes(tmp_
         assert result['evidence_id'].endswith('.png')
     finally:
         await browser.close()
+
+
+async def test_worker_automatically_verifies_candidate_in_separate_browser(tmp_path, live_server):
+    store = CaseStore(tmp_path)
+    manager = RunManager(store, lambda: Settings(api_key='synthetic-test-only', target_url=live_server+'/'),
+                         provider_factory=ScriptedProvider)
+    await manager.start()
+    try:
+        case = {'id': str(uuid4()), 'report': {'complaint': 'Discount disappeared.',
+                'expected_behavior': 'Preserve valid discount.', 'steps': ''}}
+        manager.enqueue(case)
+        import asyncio
+        await asyncio.wait_for(manager.queue.join(), 30)
+        saved = store.read(case['id'])
+        assert saved['outcome'] == 'confirmed'
+        assert saved['execution_mode'] == 'test'
+        assert saved['verification']['execution_mode'] == 'real_browser'
+        assert saved['verification']['status'] == 'pass'
+        assert saved['verification']['id'] != saved['attempt_id']
+        candidate_ids = set(saved['candidate']['evidence_ids'])
+        assert not candidate_ids.intersection(row['evidence_id'] for row in saved['verification']['observations'])
+    finally:
+        await manager.close()

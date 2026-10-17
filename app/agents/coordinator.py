@@ -12,6 +12,7 @@ from app.providers.crusoe import CrusoeClient, ProviderError
 from app.runs import now
 from app.settings import ROOT, Settings
 from app.tools.browser import BrowserAction, BrowserSession
+from app.agents.verifier import Verifier
 
 
 class StrictModel(BaseModel):
@@ -198,7 +199,7 @@ class Investigation:
     async def run(self):
         self.settings.validate_target()
         self.case.update(stage='investigating', outcome=None, attempt_id=str(uuid4()),
-                         acceptance=None, hypotheses=[], candidate=None, replay=[],
+                         acceptance=None, hypotheses=[], candidate=None, verification=None, replay=[],
                          usage_tokens=0, provider_request_count=0, browser_action_count=0,
                          execution_mode='live', provider='Crusoe', calls=[], model=None)
         provider = self.provider_factory(self.settings, on_request=self.on_request)
@@ -291,6 +292,7 @@ class RunManager:
         self.closing = False
         self.cancelled = set()
         self.pending = set()
+        self.verification_jobs = set()
 
     async def start(self):
         # Preserve receipts/evidence; explicitly stop interrupted jobs on restart.
@@ -298,7 +300,7 @@ class RunManager:
             for path in self.store.root.glob('*.json'):
                 try:
                     case = json.loads(path.read_text(encoding='utf-8'))
-                    if case.get('stage') in {'queued', 'investigating'}:
+                    if case.get('stage') in {'queued', 'investigating', 'verifying'}:
                         case.update(stage='finished', outcome='blocked', stop_reason='worker_interrupted',
                                     message='Worker restarted before this attempt completed. Evidence was preserved; start again to retry.')
                         self.store.event(case, 'interrupted', case['message'])
@@ -315,26 +317,36 @@ class RunManager:
             except asyncio.CancelledError:
                 pass
 
-    def enqueue(self, case):
+    def enqueue(self, case, verification_only=False):
         if self.active_id == case['id'] or case['id'] in self.pending:
             raise ValueError('This case is already queued or running.')
         if self.queue.full():
             raise asyncio.QueueFull()
+        if case.get('outcome') == 'confirmed':
+            raise ValueError('This case is already independently confirmed.')
+        if verification_only and not case.get('candidate'):
+            raise ValueError('A saved candidate is required for verification.')
         settings = self.settings_factory()
-        if not settings.api_key:
+        if not settings.api_key and not verification_only:
             case.update(stage='finished', outcome='blocked', execution_mode='unavailable',
                         stop_reason='missing_key', investigation_enabled=True,
                         message='Report saved. Crusoe is not configured. Set the local key, then start this case again.')
             self.store.event(case, 'blocked', case['message'])
             return
         self.cancelled.discard(case['id'])
-        case.update(stage='queued', outcome=None, execution_mode='live', stop_reason=None,
-                    investigation_enabled=True, message='Waiting for the local investigation worker.')
+        case.update(stage='queued', outcome=None, stop_reason=None,
+                    investigation_enabled=True, message='Waiting for independent replay.' if verification_only else 'Waiting for the local investigation worker.')
+        if not verification_only:
+            case['execution_mode'] = 'live'
+        else:
+            self.verification_jobs.add(case['id'])
         self.store.event(case, 'queued', case['message'])
         self.pending.add(case['id'])
         self.queue.put_nowait(case['id'])
 
     def cancel(self, case):
+        if case.get('stage') not in {'queued', 'investigating', 'verifying'} or case['id'] in self.cancelled:
+            return
         self.cancelled.add(case['id'])
         if self.active_id == case['id'] and self.active_task:
             self.active_task.cancel()
@@ -358,6 +370,7 @@ class RunManager:
                 if self.closing:
                     return
             finally:
+                self.verification_jobs.discard(case_id)
                 self.active_id = self.active_task = None
                 self.queue.task_done()
 
@@ -366,7 +379,11 @@ class RunManager:
             settings = self.settings_factory()
             run = Investigation(self.store, case, settings, self.provider_factory, self.browser_factory)
             async with asyncio.timeout(settings.timeout_seconds):
-                await run.run()
+                if case['id'] not in self.verification_jobs:
+                    await run.run()
+                if ((case.get('candidate') and case.get('stage') == 'awaiting_verification')
+                        or case['id'] in self.verification_jobs):
+                    await Verifier(self.store, case, settings, self.browser_factory).run()
         except (LimitReached, TimeoutError) as error:
             case.update(stage='finished', outcome='not_reproduced', stop_reason='budget_limit',
                         message=str(error) or 'Case time limit reached.')
