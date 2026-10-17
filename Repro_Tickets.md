@@ -1,6 +1,6 @@
 # Repro — implementation tickets
 
-Status: Created and verified in the Linear website on October 17, 2026, in the Ali Madinovich workspace/team. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned in Backlog, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority.
+Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunk 1 (ALI-5, ALI-6, ALI-7) is implemented and submitted for review before merging to main; remaining tickets are in Backlog.
 
 The six chunks are implemented as native Linear project milestones containing 14 issues. Complete chunks 1–4 for the reproduction MVP; chunk 5 adds repair; chunk 6 prepares delivery. Dependencies are recorded in ticket descriptions using the stable R01–R14 planning references; native blocking relationships have not been added.
 
