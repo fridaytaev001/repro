@@ -13,6 +13,7 @@ from app.runs import now
 from app.settings import ROOT, Settings
 from app.tools.browser import BrowserAction, BrowserSession
 from app.agents.verifier import Verifier
+from app.agents.repair import RepairRun
 
 
 class StrictModel(BaseModel):
@@ -308,6 +309,11 @@ class RunManager:
         self.cancelled = set()
         self.pending = set()
         self.verification_jobs = set()
+        self.repair_jobs = set()
+
+    @staticmethod
+    def failure_outcome(case, fallback):
+        return 'confirmed' if (case.get('verification') or {}).get('status')=='pass' else fallback
 
     async def start(self):
         # Preserve receipts/evidence; explicitly stop interrupted jobs on restart.
@@ -315,9 +321,11 @@ class RunManager:
             for path in self.store.root.glob('*.json'):
                 try:
                     case = json.loads(path.read_text(encoding='utf-8'))
-                    if case.get('stage') in {'queued', 'investigating', 'verifying'}:
-                        case.update(stage='finished', outcome='blocked', stop_reason='worker_interrupted',
+                    if case.get('stage') in {'queued', 'investigating', 'verifying', 'repairing'}:
+                        case.update(stage='finished', outcome=self.failure_outcome(case,'blocked'), stop_reason='worker_interrupted',
                                     message='Worker restarted before this attempt completed. Evidence was preserved; start again to retry.')
+                        if (case.get('repair') or {}).get('status')=='running':
+                            case['repair'].update(status='rejected',message='Repair interrupted by worker restart; confirmation preserved.')
                         self.store.event(case, 'interrupted', case['message'])
                 except (OSError, ValueError, KeyError):
                     continue
@@ -337,7 +345,7 @@ class RunManager:
             raise ValueError('This case is already queued or running.')
         if self.queue.full():
             raise asyncio.QueueFull()
-        if case.get('outcome') == 'confirmed':
+        if case.get('outcome') in {'confirmed','fixed_verified'}:
             raise ValueError('This case is already independently confirmed.')
         if verification_only and not case.get('candidate'):
             raise ValueError('A saved candidate is required for verification.')
@@ -359,14 +367,28 @@ class RunManager:
         self.pending.add(case['id'])
         self.queue.put_nowait(case['id'])
 
+    def enqueue_repair(self,case):
+        if self.active_id==case['id'] or case['id'] in self.pending:
+            raise ValueError('This case is already queued or running.')
+        if self.queue.full():
+            raise asyncio.QueueFull()
+        if case.get('outcome')!='confirmed' or (case.get('verification') or {}).get('status')!='pass':
+            raise ValueError('Repair requires an independently confirmed defect.')
+        self.cancelled.discard(case['id'])
+        self.repair_jobs.add(case['id'])
+        self.pending.add(case['id'])
+        case.update(stage='queued',message='Waiting for an isolated source repair.')
+        self.store.event(case,'repair_queued',case['message'])
+        self.queue.put_nowait(case['id'])
+
     def cancel(self, case):
-        if case.get('stage') not in {'queued', 'investigating', 'verifying'} or case['id'] in self.cancelled:
+        if case.get('stage') not in {'queued', 'investigating', 'verifying', 'repairing'} or case['id'] in self.cancelled:
             return
         self.cancelled.add(case['id'])
         if self.active_id == case['id'] and self.active_task:
             self.active_task.cancel()
         elif case.get('stage') == 'queued':
-            case.update(stage='finished', outcome='not_reproduced', stop_reason='cancelled_by_user',
+            case.update(stage='finished', outcome=self.failure_outcome(case,'not_reproduced'), stop_reason='cancelled_by_user',
                         message='Cancelled before investigation. No conclusion about the bug.')
             self.store.event(case, 'cancelled', case['message'])
 
@@ -386,12 +408,17 @@ class RunManager:
                     return
             finally:
                 self.verification_jobs.discard(case_id)
+                self.repair_jobs.discard(case_id)
                 self.active_id = self.active_task = None
                 self.queue.task_done()
 
     async def execute(self, case):
         try:
             settings = self.settings_factory()
+            if case['id'] in self.repair_jobs:
+                async with asyncio.timeout(180):
+                    await RepairRun(self.store,case,settings,self.provider_factory).run()
+                return
             run = Investigation(self.store, case, settings, self.provider_factory, self.browser_factory)
             async with asyncio.timeout(settings.timeout_seconds):
                 if case['id'] not in self.verification_jobs:
@@ -400,19 +427,19 @@ class RunManager:
                         or case['id'] in self.verification_jobs):
                     await Verifier(self.store, case, settings, self.browser_factory).run()
         except (LimitReached, TimeoutError) as error:
-            case.update(stage='finished', outcome='not_reproduced', stop_reason='budget_limit',
+            case.update(stage='finished', outcome=self.failure_outcome(case,'not_reproduced'), stop_reason='budget_limit',
                         message=str(error) or 'Case time limit reached.')
             self.store.event(case, 'limit_reached', case['message'])
         except ProviderError as error:
-            case.update(stage='finished', outcome='blocked', stop_reason=error.code, message=str(error))
+            case.update(stage='finished', outcome=self.failure_outcome(case,'blocked'), stop_reason=error.code, message=str(error))
             self.store.event(case, 'blocked', str(error), code=error.code)
         except asyncio.CancelledError:
-            case.update(stage='finished', outcome='blocked' if self.closing else 'not_reproduced',
+            case.update(stage='finished', outcome=self.failure_outcome(case,'blocked' if self.closing else 'not_reproduced'),
                         stop_reason='worker_interrupted' if self.closing else 'cancelled_by_user',
                         message='Worker stopped; evidence preserved.' if self.closing else 'Cancelled by user; no conclusion about the bug.')
             self.store.event(case, 'stopped', case['message'])
             raise
         except Exception as error:
-            case.update(stage='finished', outcome='blocked', stop_reason='runtime_error',
+            case.update(stage='finished', outcome=self.failure_outcome(case,'blocked'), stop_reason='runtime_error',
                         message=f'Investigation stopped because of {type(error).__name__}. Evidence was preserved.')
             self.store.event(case, 'blocked', case['message'])

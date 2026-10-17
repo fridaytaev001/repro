@@ -1,12 +1,14 @@
 # Repro — implementation tickets
 
-Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunks 1–3 (ALI-5 through ALI-12) are merged and Done. Chunk 4 is ready for review; chunks 5–6 remain in Backlog.
+Status: Created and verified in the Linear website on October 17, 2026. [Open Repro](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues). All tickets are unassigned, with no due dates. R01–R10 have High priority; R11–R14 have Medium priority. Chunks 1–4 (ALI-5 through ALI-14) are merged. Chunk 5 is ready for review; Chunk 6 prepares delivery.
 
 Chunk 2 (ALI-8, ALI-10, ALI-9) has a successful live Crusoe tool round trip and autonomous candidate discovery. PR #2 is merged with owner approval. The measured candidate has screenshots and executed steps. See docs/CHUNK_2_VERIFICATION.md for actual usage and the first attempt's budget stop.
 
 Chunk 3 (ALI-11, ALI-12) implements independent browser replay, deterministic coupon-preservation verification, cancellation/restart handling, and bounded outcomes. The saved live Crusoe candidate was independently confirmed in 11 replay actions / 9.52 seconds with fresh evidence and no new model requests. PR #3 is merged with owner approval. See docs/CHUNK_3_VERIFICATION.md.
 
 Chunk 4 (ALI-13, ALI-14) adds report/bundle exports, runnable replay and opposite reproduction/regression assertions, a non-falsely-confirmed live VIP20 control, and live recovery from unsuccessful remembered steps to a separately verified defect. The actual downloaded reproduction test passes and the regression test fails on its intended baseline assertion. See docs/CHUNK_4_VERIFICATION.md for measured samples and limitations.
+
+Chunk 5 (ALI-15, ALI-16) has 59 passing checks and a real Crusoe repair in an isolated copy. The protected regression fails on baseline and passes on candidate with controls and syntax passing; originals are unchanged. The proposed patch and proof are available locally. See docs/CHUNK_5_VERIFICATION.md.
 
 The six chunks are implemented as native Linear project milestones containing 14 issues. Complete chunks 1–4 for the reproduction MVP; chunk 5 adds repair; chunk 6 prepares delivery. Dependencies are recorded in ticket descriptions using the stable R01–R14 planning references; native blocking relationships have not been added.
 
