@@ -29,6 +29,7 @@ function render() {
   addressForm.hidden = cart.stage !== 'address';
   reviewPanel.hidden = cart.stage !== 'review';
   successPanel.hidden = cart.stage !== 'success';
+  document.querySelector('#coupon-form').hidden = cart.stage !== 'address';
   document.querySelector('#step-address').classList.toggle('active',cart.stage === 'address');
   document.querySelector('#step-review').classList.toggle('active',cart.stage !== 'address');
   document.querySelector('#continue-review').firstChild.textContent = cart.editingFromReview ? 'Save address ' : 'Continue to review ';

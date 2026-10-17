@@ -22,12 +22,17 @@ def test_seeded_defect_is_real_and_checkout_completes(page, live_server, tmp_pat
     page.get_by_role('button', name='Continue to review').click()
     # The first hypothesis, ordinary address entry, does NOT lose the coupon.
     expect(page.get_by_test_id('total')).to_have_text('$90.00')
+    expect(page.get_by_role('button', name='Apply', exact=True)).to_be_hidden()
+    expect(page.locator('#coupon')).to_be_hidden()
     page.get_by_role('button', name='Edit address', exact=True).click()
+    expect(page.get_by_role('button', name='Apply', exact=True)).to_be_visible()
     page.get_by_role('textbox', name='Street address', exact=True).fill('200 Pine Street')
     page.get_by_role('button', name='Save address').click()
     # Reproduction assertion passes because we observed the intentional defect.
     expect(page.get_by_test_id('total')).to_have_text('$100.00')
     expect(page.locator('#discount-row')).to_be_hidden()
+    expect(page.get_by_role('button', name='Apply', exact=True)).to_be_hidden()
+    expect(page.locator('#coupon')).to_be_hidden()
     page.screenshot(path=str(tmp_path / 'actual-discount-loss.png'))
     page.get_by_role('button', name='Place demo order').click()
     expect(page.get_by_text("You're going places.", exact=True)).to_be_visible()

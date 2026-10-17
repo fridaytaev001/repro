@@ -10,6 +10,7 @@ Tested October 17, 2026 on Windows with Python 3.12 and Playwright Chromium 156.
 - 5 Chromium checks: actual seeded state loss and completed checkout; correct ineligible-coupon behavior and quantity math; new-session isolation/reset; report submission from checkout with safely rendered complaint text and reload persistence; mobile layout/report access.
 - JavaScript syntax checks completed for store, report, and case scripts.
 - Visible browser replay observed $90 after SAVE10 and initial review, then $100 after an address edit from review. Synthetic values only.
+- Review UI follow-up: coupon entry and Apply are hidden on review, including after address edits; both remain available on the details step. The full suite passed again (18 tests, 6.37 seconds).
 
 On this workstation, the browser cache and pytest temp directories were explicitly set inside ignored `.local/`; normal installs may use their default locations.
 

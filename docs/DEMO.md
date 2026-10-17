@@ -9,6 +9,7 @@ This is evaluator material, not input to the future investigator.
 3. Continue to review. The total remains $90. This ordinary path is correct.
 4. Click **Edit address**, change the street, then **Save address**.
 5. The discount disappears and the total becomes $100. This violates store rule v1.
+   The review step has no coupon entry or Apply button; coupon entry belongs to the details step.
 6. Place the synthetic order to verify checkout completes. Nothing is charged.
 
 The intentional fault is in the demo store's address-save state transition. It is a real application state change, not a simulated event feed. Keep it until the isolated repair milestone; do not fix the target during the scaffold PR.
