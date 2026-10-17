@@ -33,6 +33,12 @@ def report_markdown(case):
     rows += ['', '## Independent observed values', '']
     for row in verification.get('observations', []):
         rows.append(f"- Step {row['step']}: {json.dumps(row['values'], ensure_ascii=False)}; screenshot {row['evidence_id']}.")
+    if case.get('repair'):
+        repair = case['repair']
+        rows += ['', '## Isolated repair', '',repair.get('message',''), '',
+                 'The original demo remains the seeded baseline. A verified result applies only to the isolated copy.', '',
+                 f"Diagnosis: {repair.get('cause','not established')}", '',
+                 f"Baseline: {(repair.get('baseline') or {}).get('result',{}).get('regression','not measured')}; candidate: {(repair.get('candidate') or {}).get('result',{}).get('regression','not measured')}."]
     rows += ['', '## Limits', '',
         'A confirmed rule violation is not a source diagnosis or a verified repair. The registered verifier covers this demo’s coupon-preservation policy. No general claim of correctness is made.', '',
         'Reproduction test passes when it observes the defect. Regression test passes only when replay completes without that supported violation. Inconclusive replay fails both tests. See README.md in the bundle.', '']
@@ -75,7 +81,7 @@ def build_handoff(store, case):
     # Export only previously registered evidence, never arbitrary filesystem paths
     # or previous handoff archives. Preserve originals and record omissions explicitly.
     for artifact_id, record in list(case.get('artifacts', {}).items()):
-        if record['media_type'] not in {'image/png', 'application/zip'} or 'exports' in record['file'].replace('\\', '/').split('/'):
+        if record['media_type'] not in {'image/png', 'application/zip','text/x-diff','application/json'} or 'exports' in record['file'].replace('\\', '/').split('/'):
             continue
         try:
             path, _ = store.artifact_path(case, artifact_id)

@@ -13,7 +13,7 @@ function screenshot(artifactId){
 }
 function render(data){
   const stages={received:'Your report is in.',queued:'An investigation is queued.',investigating:'Following the evidence.',verifying:'Checking in a fresh session.',awaiting_verification:'A candidate worth checking.',finished:'The investigation stopped.'};
-  const outcomes={confirmed:'The bug is independently confirmed.',blocked:'The investigation is blocked.',not_reproduced:'No reproduction established.',needs_information:'More information is needed.'};
+  const outcomes={fixed_verified:'A repair passed in an isolated copy.',confirmed:'The bug is independently confirmed.',blocked:'The investigation is blocked.',not_reproduced:'No reproduction established.',needs_information:'More information is needed.'};
   text('#case-heading',outcomes[data.outcome]||stages[data.stage]||'Your report is in.');
   text('#case-message',data.message);
   let mode=data.execution_mode==='live'&&data.calls?.length?'LIVE CRUSOE':data.execution_mode==='test'?'TEST EXECUTION':data.execution_mode==='live'?'CRUSOE / NO MODEL RESPONSE':'PROVIDER UNAVAILABLE';
@@ -24,10 +24,21 @@ function render(data){
   text('#complaint',data.report.complaint);text('#expected',data.report.expected_behavior);
   text('#steps',data.report.steps||'No steps supplied — that is okay.');text('#page-url',data.report.page_url);
   document.querySelector('#case-details').hidden=false;
-  const active=['queued','investigating','verifying'].includes(data.stage);
+  const active=['queued','investigating','verifying','repairing'].includes(data.stage);
   document.querySelector('#cancel-run').hidden=!active;
-  document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification'||data.outcome==='confirmed';
-  document.querySelector('#verify-run').hidden=active||!data.investigation_enabled||!data.candidate||data.outcome==='confirmed';
+  document.querySelector('#start-run').hidden=active||!data.investigation_enabled||data.stage==='awaiting_verification'||['confirmed','fixed_verified'].includes(data.outcome);
+  document.querySelector('#verify-run').hidden=active||!data.investigation_enabled||!data.candidate||['confirmed','fixed_verified'].includes(data.outcome);
+  document.querySelector('#repair-run').hidden=active||!data.investigation_enabled||data.outcome!=='confirmed';
+  document.querySelector('#repair-panel').hidden=!data.repair;
+  if(data.repair){
+    const r=data.repair;
+    text('#repair-heading',r.status==='verified'?'Verified repair, original demo preserved':r.status==='running'?'Testing an isolated source change':'Repair rejected; defect remains confirmed');
+    text('#repair-message',r.message||'Frozen baseline and candidate checks are running.');
+    text('#repair-cause',r.cause?'Proposed cause: '+r.cause+' (store.js lines '+r.source_lines.join(', ')+')':'');
+    text('#repair-proof','Baseline regression: '+(r.baseline?.result?.regression||'not measured')+' · Candidate regression: '+(r.candidate?.result?.regression||'not measured')+' · Candidate controls: '+(r.candidate?.result?.controls?.status||'not measured'));
+    document.querySelector('#repair-diff').hidden=!r.diff_id;
+    if(r.diff_id)document.querySelector('#repair-diff').href=endpoint+'/artifacts/'+encodeURIComponent(r.diff_id);
+  }
   document.querySelector('#handoff-panel').hidden=active;
   text('#handoff-note',data.candidate?'Includes actual replay steps, frozen criteria, screenshots/traces, and separate reproduction and regression tests. The reproduction test passes on the buggy target; the regression test should fail until a repair is verified.':'Report and existing evidence are available. Replay and tests are unavailable until a candidate exists.');
   for(const [selector,kind] of [['#download-report-md','markdown'],['#download-report-json','json'],['#download-bundle','bundle']])document.querySelector(selector).href=endpoint+'/exports/'+kind;
@@ -40,7 +51,7 @@ function render(data){
   }
   document.querySelector('#candidate-panel').hidden=!data.candidate;
   if(data.candidate){
-    text('#candidate-label',data.outcome==='confirmed'?'CANDIDATE / INDEPENDENTLY CONFIRMED':'CANDIDATE / REQUIRES INDEPENDENT VERIFICATION');
+    text('#candidate-label',['confirmed','fixed_verified'].includes(data.outcome)?'CANDIDATE / INDEPENDENTLY CONFIRMED':'CANDIDATE / REQUIRES INDEPENDENT VERIFICATION');
     text('#candidate-summary',data.candidate.summary);text('#candidate-expected',data.candidate.expected_behavior);text('#candidate-observed',data.candidate.observed_behavior);
     const steps=document.querySelector('#candidate-steps');steps.replaceChildren();
     for(const step of data.candidate.steps){steps.append(element('li',step.action+(step.target?' '+step.target.name:'')+(step.value?' → '+step.value:'')+(step.url?' '+step.url:'')));}
@@ -82,11 +93,11 @@ async function refresh(){
     const data=await response.json();render(data);
     const eventsResponse=await fetch(endpoint+'/events?after='+cursor);
     if(eventsResponse.ok)appendEvents((await eventsResponse.json()).events);
-    if(['queued','investigating','verifying'].includes(data.stage))setTimeout(refresh,1500);
+    if(['queued','investigating','verifying','repairing'].includes(data.stage))setTimeout(refresh,1500);
   }catch(error){text('#case-heading','We could not open this report.');text('#case-message',error.message);}
   finally{polling=false;}
 }
-for(const [selector,action] of [['#start-run','start'],['#cancel-run','cancel'],['#verify-run','verify']]){
+for(const [selector,action] of [['#start-run','start'],['#cancel-run','cancel'],['#verify-run','verify'],['#repair-run','repair']]){
   document.querySelector(selector).addEventListener('click',async event=>{
     event.target.disabled=true;text('#run-error','');
     try{const response=await fetch(endpoint+'/'+action,{method:'POST'});if(!response.ok){const detail=(await response.json()).detail;throw new Error(typeof detail==='string'?detail:'Could not update this case.');}await refresh();}

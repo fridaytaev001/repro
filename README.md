@@ -2,7 +2,7 @@
 
 Turn a vague website complaint into an independently reproduced bug, a runnable regression test, and an optional tested patch for engineer review.
 
-**Track:** Done Means Done. **Current branch:** Chunk 4 — engineer handoff and measured evaluation. Chunks 1–3 are merged. Real Crusoe discovery, independent replay, a correct-behavior control, and recovery from non-triggering remembered steps have been recorded.
+**Track:** Done Means Done. **Current branch:** Chunk 5 — isolated source repair. Chunks 1–4 are merged. Real Crusoe discovery, independent replay, control/recovery, and a protected before/after source repair have been recorded.
 
 ## What works now
 
@@ -10,14 +10,15 @@ Turn a vague website complaint into an independently reproduced bug, a runnable 
 - A real intentionally seeded discount-state defect, plus a correct coupon-ineligibility control.
 - Report widget that validates and saves complaints locally, then displays a persistent case receipt.
 - API and real Chromium tests for the store, defect, negative control, and report path.
-- A single background worker and bounded waiting list, typed browser operations, frozen checks, hypothesis changes, saved observations/screenshots/traces, and candidate-only results.
+- A single background worker and bounded waiting list, typed browser operations, frozen checks, hypothesis changes, actual screenshots/traces, independent verification, and downloadable runnable evidence.
+- Crusoe source repair restricted to an isolated `store.js` copy, with a frozen baseline/candidate regression, controls, syntax check, receipts, and patch download. The original demo retains its bug.
 - Explicit missing-key/provider failures, cancellation, request/action/token/time limits, and restart interruption records.
 
 No real payments or shipments occur. Use synthetic customer data. This local prototype has no authentication; run on loopback only.
 
 ## Run locally
 
-Requires Python 3.12+.
+Requires Python 3.12+. Isolated repair also requires Node.js for its registered JavaScript syntax check.
 
 ```sh
 python -m venv .venv
@@ -40,7 +41,9 @@ Open **http://127.0.0.1:8000**. Report files live in ignored `runs/`. A report i
 
 The default runtime sends inference only to Crusoe's fixed serverless endpoint. It reads public store rules and real visible browser observations; source code, evaluator tests, and the operator guide are not included in model input. Browser requests are limited to the configured demo origin/assets; service writes and other origins are blocked. There is no shell, arbitrary JavaScript, or source-edit tool.
 
-The case page shows real events, criteria, usage provenance, and actual screenshot links. A found sequence becomes a candidate, then the worker independently replays it in a fresh browser. Only a registered documented-rule violation permits **confirmed**. A saved candidate can use **Verify saved candidate** without another model call. Incomplete replay is blocked/inconclusive; a completed replay without a supported violation is not reproduced. No repair or fixed outcome is claimed.
+The case page shows real events, criteria, usage provenance, and actual screenshot links. A found sequence becomes a candidate, then the worker independently replays it in a fresh browser. Only a registered documented-rule violation permits **confirmed**. A saved candidate can use **Verify saved candidate** without another model call. Incomplete replay is blocked/inconclusive; a completed replay without a supported violation is not reproduced.
+
+A confirmed case offers **Try an isolated repair**. The repairer can read/search/patch only its source copy; protected baseline, frozen checks and fixture remain outside its writable tools. Only the identical regression failing on baseline and passing on candidate, plus required controls and syntax, permits **fixed_verified**. Rejected repair preserves confirmation. Download the proposed patch for review; the original seeded target is preserved.
 
 Stopped cases include an **Engineer handoff** section with report Markdown/JSON and a ZIP containing actual evidence, replay/fixture JSON, hashes, and separate runnable reproduction/regression tests. Extract it inside this checkout and follow its README. Replaying uses no inference or credentials:
 
@@ -71,6 +74,7 @@ Browser tests start their own temporary server, cases directory, and fresh brows
 - [Chunk 2 verification](docs/CHUNK_2_VERIFICATION.md) — protocol/integration results and measured live Crusoe candidate discovery.
 - [Chunk 3 verification](docs/CHUNK_3_VERIFICATION.md) — independent policy, measured confirmation, controls, bounds, and limits.
 - [Chunk 4 verification](docs/CHUNK_4_VERIFICATION.md) — actual downloaded-test results, live control/recovery, measured usage, and supported cost estimates.
+- [Chunk 5 verification](docs/CHUNK_5_VERIFICATION.md) — actual live isolated repair and protected baseline/candidate results.
 - [Technical design](Repro_Design_Doc.md).
 - [Implementation plan and Linear mapping](Repro_Tickets.md).
 - [Linear project](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues).
@@ -96,10 +100,10 @@ Copy `.env.example` to `.env` and enter `CRUSOE_API_KEY` locally. Never paste ke
 
 ## Delivery workflow
 
-Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunks 1–3 (Linear ALI-5 through ALI-12) are merged. Chunk 4 (ALI-13, ALI-14) has its own branch and review gate; source repair remains Chunk 5.
+Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunks 1–4 (Linear ALI-5 through ALI-14) are merged. Chunk 5 (ALI-15, ALI-16) has its own source-repair branch and review gate.
 
 ## Architecture and limits
 
-FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 exploration actions, three hypotheses, 24 provider requests including retries, 160,000 budget tokens, five minutes per attempt. Verification permits up to 30 replay actions with its own 60-second limit inside the worker deadline. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation and restart preserve evidence. The deterministic verifier currently supports the demo's versioned coupon-preservation policy. No repair, multi-tenant hosting, or arbitrary-site access is included.
+FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 exploration actions, three hypotheses, 24 provider requests including retries, 160,000 budget tokens, five minutes per attempt. Verification permits up to 30 replay actions with its own 60-second limit inside the worker deadline. Isolated repair permits three edits, ten provider requests, 50,000 tokens and 180 seconds; child check deadlines are also bounded. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation and restart preserve evidence and established confirmation. The deterministic verifier covers the demo's versioned coupon-preservation policy. No multi-tenant hosting or arbitrary-site/repository access is included.
 
 Built here: store artwork/UI, synthetic checkout state, seeded defect/control, report API, case receipt, docs, and tests. Libraries: FastAPI, Uvicorn, Pydantic, Playwright, HTTPX, pytest, and python-dotenv; their respective licenses apply. The product illustration is original inline SVG and uses no external assets.

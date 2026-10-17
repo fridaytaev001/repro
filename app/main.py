@@ -66,7 +66,7 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
         if enable_investigation:
             await manager.close()
 
-    app = FastAPI(title="Repro", version="0.4.0", lifespan=lifespan)
+    app = FastAPI(title="Repro", version="0.5.0", lifespan=lifespan)
     app.state.manager = manager
     local = dotenv_values(ROOT / '.env', interpolate=False)
     configured_origins = os.environ.get('REPRO_ALLOWED_ORIGINS') or local.get('REPRO_ALLOWED_ORIGINS') or 'http://127.0.0.1:8000,http://localhost:8000'
@@ -76,7 +76,7 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
 
     @app.get("/health")
     async def health():
-        return {"status": "ok", "milestone": 4, "investigation_enabled": enable_investigation,
+        return {"status": "ok", "milestone": 5, "investigation_enabled": enable_investigation,
                 "provider": settings_factory().public(), "queued_cases": manager.queue.qsize(),
                 "active_case": manager.active_id}
 
@@ -164,6 +164,19 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
         rows = store.events(case_id, max(after, 0))
         return {'events': rows, 'next_cursor': rows[-1]['seq'] if rows else max(after, 0)}
 
+    @app.post('/api/runs/{case_id}/repair',status_code=202)
+    async def repair_case(case_id:UUID):
+        if not enable_investigation:
+            raise HTTPException(409,'Repair is disabled in this profile.')
+        case = get_case(case_id)
+        try:
+            manager.enqueue_repair(case)
+        except asyncio.QueueFull:
+            raise HTTPException(429,'The local waiting list is full.') from None
+        except ValueError as error:
+            raise HTTPException(409,str(error)) from None
+        return {'case_id':str(case_id),'stage':case['stage']}
+
     @app.get('/api/runs/{case_id}/artifacts/{artifact_id}')
     async def artifact(case_id: UUID, artifact_id: str):
         case = get_case(case_id)
@@ -186,7 +199,7 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
     @app.get('/api/runs/{case_id}/exports/{kind}')
     async def export_case(case_id: UUID, kind: Literal['markdown', 'json', 'bundle']):
         case = get_case(case_id)
-        if case['stage'] in {'queued', 'investigating', 'verifying'}:
+        if case['stage'] in {'queued', 'investigating', 'verifying', 'repairing'}:
             raise HTTPException(409, 'Wait for the current attempt to stop before exporting.')
         try:
             artifacts = build_handoff(store, case)
