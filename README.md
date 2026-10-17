@@ -2,7 +2,7 @@
 
 Turn a vague website complaint into an independently reproduced bug, a runnable regression test, and an optional tested patch for engineer review.
 
-**Track:** Done Means Done. **Current branch:** Chunk 2 — bounded Crusoe/browser investigation. Chunk 1 is merged. A live Crusoe tool round trip and autonomous candidate discovery passed; independent confirmation belongs to Chunk 3.
+**Track:** Done Means Done. **Current branch:** Chunk 3 — independent browser verification. Chunk 1 is merged; Chunk 2 is awaiting owner review. The live-discovered discount defect has now been independently replayed and confirmed in a fresh context.
 
 ## What works now
 
@@ -40,7 +40,7 @@ Open **http://127.0.0.1:8000**. Report files live in ignored `runs/`. A report i
 
 The default runtime sends inference only to Crusoe's fixed serverless endpoint. It reads public store rules and real visible browser observations; source code, evaluator tests, and the operator guide are not included in model input. Browser requests are limited to the configured demo origin/assets; service writes and other origins are blocked. There is no shell, arbitrary JavaScript, or source-edit tool.
 
-The case page shows real events, criteria, usage provenance, and actual screenshot links. A found sequence stops at **awaiting_verification**, with no confirmed/fixed outcome. Independent verification belongs to Chunk 3.
+The case page shows real events, criteria, usage provenance, and actual screenshot links. A found sequence becomes a candidate, then the worker independently replays it in a fresh browser. Only a registered documented-rule violation permits **confirmed**. A saved candidate can use **Verify saved candidate** without another model call. Incomplete replay is blocked/inconclusive; a completed replay without a supported violation is not reproduced. No repair or fixed outcome is claimed.
 
 ## Test
 
@@ -59,6 +59,7 @@ Browser tests start their own temporary server, cases directory, and fresh brows
 - [Operator-only demo guide](docs/DEMO.md) — contains the trigger; exclude from investigator input.
 - [Chunk 1 verification](docs/CHUNK_1_VERIFICATION.md) — 18 passing checks and known limits.
 - [Chunk 2 verification](docs/CHUNK_2_VERIFICATION.md) — protocol/integration results and measured live Crusoe candidate discovery.
+- [Chunk 3 verification](docs/CHUNK_3_VERIFICATION.md) — independent policy, measured confirmation, controls, bounds, and limits.
 - [Technical design](Repro_Design_Doc.md).
 - [Implementation plan and Linear mapping](Repro_Tickets.md).
 - [Linear project](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues).
@@ -84,10 +85,10 @@ Copy `.env.example` to `.env` and enter `CRUSOE_API_KEY` locally. Never paste ke
 
 ## Delivery workflow
 
-Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunk 1 (Linear ALI-5, ALI-6, ALI-7) is merged. Chunk 2 (ALI-8, ALI-10, ALI-9) has passed its live connection and investigation gate and targets main in PR #2. It awaits owner review.
+Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunk 1 (Linear ALI-5, ALI-6, ALI-7) is merged. Chunk 2 (ALI-8, ALI-10, ALI-9) targets main in PR #2 and awaits owner review. Chunk 3 (ALI-11, ALI-12) is stacked on Chunk 2 until that merge is approved.
 
 ## Architecture and limits
 
-FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 browser actions, three hypotheses, 24 provider requests including retries, 160,000 budget tokens, five minutes per attempt. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation/startup recovery controls were brought forward from Chunk 3 because the worker needs them. No automated confirmation, repair, multi-tenant hosting, or arbitrary-site access is included.
+FastAPI serves the HTML/CSS/JS target and report API. Browser-local state isolates demo carts; atomic JSON snapshots and JSONL events preserve cases. One worker owns the bounded model/browser loop. Defaults: one active case, five waiting, 30 exploration actions, three hypotheses, 24 provider requests including retries, 160,000 budget tokens, five minutes per attempt. Verification permits up to 30 replay actions with its own 60-second limit inside the worker deadline. Returned token usage is tracked; missing usage uses a conservative estimate for budgeting, not a measured billing claim. Cancellation and restart preserve evidence. The deterministic verifier currently supports the demo's versioned coupon-preservation policy. No repair, multi-tenant hosting, or arbitrary-site access is included.
 
 Built here: store artwork/UI, synthetic checkout state, seeded defect/control, report API, case receipt, docs, and tests. Libraries: FastAPI, Uvicorn, Pydantic, Playwright, HTTPX, pytest, and python-dotenv; their respective licenses apply. The product illustration is original inline SVG and uses no external assets.

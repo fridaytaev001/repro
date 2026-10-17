@@ -144,6 +144,19 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
         manager.cancel(case)
         return {'case_id': str(case_id), 'cancellation_requested': True}
 
+    @app.post('/api/runs/{case_id}/verify', status_code=202)
+    async def verify_case(case_id: UUID):
+        if not enable_investigation:
+            raise HTTPException(409, 'Investigations are disabled in this profile.')
+        case = get_case(case_id)
+        try:
+            manager.enqueue(case, verification_only=True)
+        except asyncio.QueueFull:
+            raise HTTPException(429, 'The local waiting list is full.') from None
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+        return {'case_id': str(case_id), 'stage': case['stage']}
+
     @app.get('/api/runs/{case_id}/events')
     async def events(case_id: UUID, after: int = 0):
         get_case(case_id)

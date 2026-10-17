@@ -20,6 +20,7 @@ class Settings:
     max_tokens: int = 160000
     timeout_seconds: int = 300
     max_output_tokens: int = 4096
+    verification_timeout_seconds: int = 60
 
     @classmethod
     def read(cls):

@@ -34,7 +34,7 @@ def live_server(tmp_path_factory):
     sock.close()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def browser():
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
