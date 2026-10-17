@@ -3,7 +3,11 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
+from app.main import create_app as app_factory
+
+
+def create_app(*args, **kwargs):
+    return app_factory(*args, enable_investigation=False, **kwargs)
 
 
 def payload(**changes):

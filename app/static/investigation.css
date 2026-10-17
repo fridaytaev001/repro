@@ -1,0 +1,15 @@
+.run-toolbar{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-top:24px}
+.timeline{list-style:none;padding:0;margin:24px 0 0}
+.timeline>li{border-left:1px solid var(--line);padding:0 0 25px 20px;position:relative}
+.timeline>li:before{content:"";position:absolute;left:-4px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--olive)}
+.timeline>li>span{display:block;font-size:10px;color:var(--muted);margin-bottom:8px}
+.timeline strong{font-size:13px;font-weight:500;line-height:1.6}
+.timeline p{font-size:12px;margin:8px 0}
+.timeline pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.7;max-height:250px;overflow:auto}
+.timeline a{font-size:11px;text-decoration:underline}
+.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.evidence-grid img{width:100%;height:auto;border:1px solid var(--line)}
+.observation-pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.case-card li{font-size:13px;line-height:1.8;margin-bottom:10px}
+#run-error{color:#a43f28;font-size:12px}
+@media(max-width:640px){.evidence-grid,.observation-pair{grid-template-columns:1fr}}
