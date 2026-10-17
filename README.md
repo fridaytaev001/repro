@@ -2,7 +2,7 @@
 
 Turn a vague website complaint into an independently reproduced bug, a runnable regression test, and an optional tested patch for engineer review.
 
-**Track:** Done Means Done. **Current branch:** Chunk 5 — isolated source repair. Chunks 1–4 are merged. Real Crusoe discovery, independent replay, control/recovery, and a protected before/after source repair have been recorded.
+**Track:** Done Means Done. **Current branch:** Chunk 6 — delivery and demo. Chunks 1–4 are merged; repair and delivery PRs await owner review. Real Crusoe discovery, independent replay, control/recovery, and a protected before/after repair have been recorded. A labelled one-minute recorded walkthrough and backup evidence bundle are prepared locally.
 
 ## What works now
 
@@ -18,7 +18,7 @@ No real payments or shipments occur. Use synthetic customer data. This local pro
 
 ## Run locally
 
-Requires Python 3.12+. Isolated repair also requires Node.js for its registered JavaScript syntax check.
+Requires Python 3.12+. Repair syntax uses Node.js from PATH or the pinned Playwright package's bundled Node.
 
 ```sh
 python -m venv .venv
@@ -31,6 +31,10 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open **http://127.0.0.1:8000**. Report files live in ignored `runs/`. A report is only acknowledged after it is saved. The store and report intake work without an API key; an unconfigured investigation is saved as `blocked` with a specific reason.
+
+On the prepared Windows workspace, double-click **Start_Repro.cmd**. It uses the existing `.venv` and workspace browser cache. Cross-platform: `python -m scripts.run_local --open`. It reuses an already running Repro server.
+
+If opening `.env` is inconvenient, run `python -m scripts.configure` in your terminal. Its masked prompt saves the key only in the ignored local file; no chat paste or commit is needed.
 
 ## Enable a real investigation
 
@@ -75,6 +79,9 @@ Browser tests start their own temporary server, cases directory, and fresh brows
 - [Chunk 3 verification](docs/CHUNK_3_VERIFICATION.md) — independent policy, measured confirmation, controls, bounds, and limits.
 - [Chunk 4 verification](docs/CHUNK_4_VERIFICATION.md) — actual downloaded-test results, live control/recovery, measured usage, and supported cost estimates.
 - [Chunk 5 verification](docs/CHUNK_5_VERIFICATION.md) — actual live isolated repair and protected baseline/candidate results.
+- [Chunk 6 delivery](docs/CHUNK_6_VERIFICATION.md) — checked media, backup package, startup and final limits.
+- [Architecture](docs/ARCHITECTURE.md) — coordinator, trusted policy check and bounded queue in plain language.
+- [Demo runbooks](docs/DEMO_RUNBOOK.md), [submission package](docs/SUBMISSION.md), and [dependency attribution](docs/DEPENDENCIES.md).
 - [Technical design](Repro_Design_Doc.md).
 - [Implementation plan and Linear mapping](Repro_Tickets.md).
 - [Linear project](https://linear.app/ali-madinovich/project/repro-308900fec3ae/issues).
@@ -100,7 +107,7 @@ Copy `.env.example` to `.env` and enter `CRUSOE_API_KEY` locally. Never paste ke
 
 ## Delivery workflow
 
-Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunks 1–4 (Linear ALI-5 through ALI-14) are merged. Chunk 5 (ALI-15, ALI-16) has its own source-repair branch and review gate.
+Each completed chunk gets its own feature branch and PR. The owner explicitly approves merging into `main`. Chunks 1–4 (Linear ALI-5 through ALI-14) are merged. Chunk 5 (ALI-15, ALI-16) is PR #5; final delivery (ALI-17, ALI-18) is stacked on it until that merge. Local media are in ignored `.local/delivery/`. Public video hosting and the organizer form are separate final actions; neither is claimed complete.
 
 ## Architecture and limits
 
