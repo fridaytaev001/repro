@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+runs/
+__pycache__/
+.venv/
+.pytest_cache/
+test-results/
+playwright-report/
+*.pyc
+Repro_Linear_Tickets.png
+.local/
