@@ -21,6 +21,7 @@ from app.providers.crusoe import CrusoeClient, ProviderError
 from app.runs import CaseStore
 from app.settings import Settings
 from app.tools.browser import BrowserSession
+from app.handoff import build_handoff
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,7 +66,7 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
         if enable_investigation:
             await manager.close()
 
-    app = FastAPI(title="Repro", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Repro", version="0.4.0", lifespan=lifespan)
     app.state.manager = manager
     local = dotenv_values(ROOT / '.env', interpolate=False)
     configured_origins = os.environ.get('REPRO_ALLOWED_ORIGINS') or local.get('REPRO_ALLOWED_ORIGINS') or 'http://127.0.0.1:8000,http://localhost:8000'
@@ -75,7 +76,7 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
 
     @app.get("/health")
     async def health():
-        return {"status": "ok", "milestone": 2, "investigation_enabled": enable_investigation,
+        return {"status": "ok", "milestone": 4, "investigation_enabled": enable_investigation,
                 "provider": settings_factory().public(), "queued_cases": manager.queue.qsize(),
                 "active_case": manager.active_id}
 
@@ -181,6 +182,18 @@ def create_app(run_dir: Path | None = None, allowed_origins: set[str] | None = N
             raise HTTPException(503, {'code': error.code, 'message': str(error)}) from None
         finally:
             await provider.close()
+
+    @app.get('/api/runs/{case_id}/exports/{kind}')
+    async def export_case(case_id: UUID, kind: Literal['markdown', 'json', 'bundle']):
+        case = get_case(case_id)
+        if case['stage'] in {'queued', 'investigating', 'verifying'}:
+            raise HTTPException(409, 'Wait for the current attempt to stop before exporting.')
+        try:
+            artifacts = build_handoff(store, case)
+            path, media = store.artifact_path(case, artifacts[kind])
+        except OSError:
+            raise HTTPException(503, 'Could not build the local handoff. Evidence remains saved.') from None
+        return FileResponse(path, media_type=media, filename=path.name)
 
     return app
 
